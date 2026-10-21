@@ -1,34 +1,49 @@
+import uuid
 from uuid import UUID
+from app.schemas.student import StudentCreate, StudentUpdate
 
-from app.schemas.student import StudentCreate, StudentRead, StudentUpdate
+class StudentRepository:
+    def __init__(self):
+        self._storage = {}
 
+    def create(self, student_in: StudentCreate) -> dict:
+        for student in self._storage.values():
+            if student["email"].lower() == student_in.email.lower():
+                raise ValueError("Email already exists")
 
-class StudentNotFoundError(KeyError):
-    """Запис студента не знайдено."""
+        student_id = uuid.uuid4()
+        
+        new_student = {
+            "id": student_id,
+            **student_in.model_dump() 
+        }
+        
+        self._storage[student_id] = new_student
+        return new_student
 
+    def get_all(self) -> list[dict]:
+        return list(self._storage.values())
 
-class DuplicateEmailError(ValueError):
-    """Електронна адреса вже використовується."""
+    def get_by_id(self, student_id: UUID) -> dict | None:
+        return self._storage.get(student_id)
 
+    def update(self, student_id: UUID, student_in: StudentUpdate) -> dict | None:
+        if student_id not in self._storage:
+            return None
 
-class InMemoryStudentRepository:
-    def __init__(self) -> None:
-        self._students: dict[UUID, StudentRead] = {}
+        update_data = student_in.model_dump(exclude_unset=True)
+        
+        if not update_data:
+            raise ValueError("Empty update body")
 
-    def create(self, payload: StudentCreate) -> StudentRead:
-        raise NotImplementedError
+        if "email" in update_data:
+            new_email = update_data["email"].lower()
+            for k, student in self._storage.items():
+                if k != student_id and student["email"].lower() == new_email:
+                    raise ValueError("Email already exists")
 
-    def list(self, *, variant_filter: str | None = None) -> list[StudentRead]:
-        raise NotImplementedError
+        current_student = self._storage[student_id]
+        current_student.update(update_data)
+        return current_student
 
-    def get(self, student_id: UUID) -> StudentRead:
-        raise NotImplementedError
-
-    def update(self, student_id: UUID, payload: StudentUpdate) -> StudentRead:
-        raise NotImplementedError
-
-    def clear(self) -> None:
-        self._students.clear()
-
-
-student_repository = InMemoryStudentRepository()
+student_repository = StudentRepository()
