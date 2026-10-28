@@ -28,7 +28,7 @@ def get_students(study_program: str | None = Query(None, description="Фільт
 def get_student(student_id: UUID):
     student = student_repository.get_by_id(student_id)
     if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
+        raise HTTPException(status_code=404, detail="Не знайдено студента з вказаним ID")
     return student
 
 @router.patch("/{student_id}", response_model=StudentRead)
@@ -36,7 +36,7 @@ def update_student(student_id: UUID, student_in: StudentUpdate):
     try:
         student = student_repository.update(student_id, student_in)
         if not student:
-            raise HTTPException(status_code=404, detail="Student not found")
+            raise HTTPException(status_code=404, detail="Не знайдено студента з вказаним ID")
         return student
     except ValueError as e:
         if str(e) == "Email already exists":
